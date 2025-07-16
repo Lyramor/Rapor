@@ -506,14 +506,45 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
     });
 
     // whistleblower
-    Route::prefix('whistleblower')->group(function () {
-        Route::get('/', "WhistleblowerController@index")->name('whistleblower');
-        Route::get('/riwayat', "WhistleblowerController@riwayat")->name('whistleblower.riwayat');
-        Route::get('/detail/{id}', "WhistleblowerController@detail")->name('whistleblower.detail');
-        Route::post('/store', "WhistleblowerController@store")->name('whistleblower.store');
-        Route::post('/update', "WhistleblowerController@update")->name('whistleblower.update');
-        Route::delete('/{id}', "WhistleblowerController@destroy")->name('whistleblower.delete');
+    // Route::prefix('whistleblower')->group(function () {
+    //     Route::get('/', "WhistleblowerController@index")->name('whistleblower');
+    //     Route::get('/riwayat', "WhistleblowerController@riwayat")->name('whistleblower.riwayat');
+    //     Route::get('/detail/{id}', "WhistleblowerController@detail")->name('whistleblower.detail');
+    //     Route::post('/store', "WhistleblowerController@store")->name('whistleblower.store');
+    //     Route::post('/update', "WhistleblowerController@update")->name('whistleblower.update');
+    //     Route::delete('/{id}', "WhistleblowerController@destroy")->name('whistleblower.delete');
+    // });
+
+    // Whistleblower Routes untuk User/Pelapor
+Route::middleware(['auth'])->group(function () {
+    
+    // Routes untuk pelapor (semua role kecuali Admin PPKPT)
+    Route::prefix('whistleblower')->name('whistleblower.')->group(function () {
+        Route::get('/', [App\Http\Controllers\WhistleblowerController::class, 'index'])->name('index');
+        // Route::get('/create', [App\Http\Controllers\WhistleblowerController::class, 'create'])->name('create');
+        // Route::post('/', [App\Http\Controllers\WhistleblowerController::class, 'store'])->name('store');
+        // Route::get('/{id}', [App\Http\Controllers\WhistleblowerController::class, 'show'])->name('show');
+        // Route::post('/check-status', [App\Http\Controllers\WhistleblowerController::class, 'checkStatus'])->name('check-status');
+        // Route::get('/lampiran/{id}/download', [App\Http\Controllers\WhistleblowerController::class, 'downloadLampiran'])->name('download-lampiran');
     });
+
+    // Routes untuk Admin PPKPT
+    Route::prefix('admin/whistleblower')->name('admin.whistleblower.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'index'])->name('index');
+        Route::get('/dashboard', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/{id}', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'show'])->name('show');
+        // Route::put('/{id}/status', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateStatus'])->name('update-status');
+        // Route::get('/export', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'export'])->name('export');
+        // Route::get('/lampiran/{id}/download', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'downloadLampiran'])->name('download-lampiran');
+    });
+});
+
+// Route khusus untuk cek status tanpa login (untuk pengaduan anonim)
+Route::get('/whistleblower/status', function() {
+    return view('whistleblower.check-status');
+})->name('whistleblower.status-page');
+
+Route::post('/whistleblower/status/check', [App\Http\Controllers\WhistleblowerController::class, 'checkStatus'])->name('whistleblower.status-check');
 
     //test
     Route::get('/test', "TestController@index");
