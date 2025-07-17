@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log; // Tambahkan ini untuk logging
 
 class WhistleblowerController extends Controller
 {
@@ -64,9 +65,18 @@ class WhistleblowerController extends Controller
             'pihak_terlibat' => 'array',
             'pihak_terlibat.*.nama_lengkap' => 'required|string|max:255',
             'pihak_terlibat.*.jabatan' => 'nullable|string|max:255',
-            'lampiran' => 'array|max:5',
-            'lampiran.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120', // 5MB max
+            
+            // Validasi untuk file lampiran
+            'lampiran' => 'array|nullable|max:5', // Batas maksimal 5 file
+            'lampiran.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:15360', // Max 15MB (15 * 1024 KB = 15360)
             'keterangan_lampiran' => 'array',
+            'keterangan_lampiran.*' => 'nullable|string|max:255',
+
+            // Validasi untuk URL lampiran
+            'url_lampiran' => 'array|nullable|max:5', // Batas maksimal 5 URL
+            'url_lampiran.*' => 'nullable|url|max:2048', // URL valid dan panjang maksimal 2048 karakter
+            'keterangan_url_lampiran' => 'array',
+            'keterangan_url_lampiran.*' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -92,19 +102,37 @@ class WhistleblowerController extends Controller
                 }
             }
 
-            // Handle file uploads
+            // Handle file uploads (jika ada)
             if ($request->hasFile('lampiran')) {
                 foreach ($request->file('lampiran') as $index => $file) {
                     $originalName = $file->getClientOriginalName();
                     $filename = time() . '_' . $index . '_' . Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . $file->getClientOriginalExtension();
                     
+                    // Simpan di disk 'public' di dalam folder 'whistleblower/lampiran'
                     $path = $file->storeAs('whistleblower/lampiran', $filename, 'public');
                     
                     WhistleLampiran::create([
                         'pengaduan_id' => $pengaduan->id,
-                        'file' => $path,
+                        'path_file' => $path, // Menggunakan kolom 'path_file'
+                        'jenis_lampiran' => 'file', // Tentukan jenisnya sebagai 'file'
+                        'url_eksternal' => null,   // Atur null karena ini bukan URL
                         'keterangan' => $request->keterangan_lampiran[$index] ?? null,
                     ]);
+                }
+            }
+
+            // Handle URL uploads (jika ada)
+            if ($request->filled('url_lampiran')) {
+                foreach ($request->input('url_lampiran') as $index => $url) {
+                    if (!empty($url)) { // Pastikan URL tidak kosong
+                        WhistleLampiran::create([
+                            'pengaduan_id' => $pengaduan->id,
+                            'path_file' => null, // Atur null karena ini bukan file fisik
+                            'jenis_lampiran' => 'url', // Tentukan jenisnya sebagai 'url'
+                            'url_eksternal' => $url, // Simpan URL eksternal
+                            'keterangan' => $request->keterangan_url_lampiran[$index] ?? null,
+                        ]);
+                    }
                 }
             }
 
@@ -117,6 +145,12 @@ class WhistleblowerController extends Controller
                 ->with('kode_pengaduan', $pengaduan->kode_pengaduan);
                 
         } catch (\Exception $e) {
+            // Log error untuk debugging
+            Log::error('Error saving whistleblower report', [
+                'error_message' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Terjadi kesalahan saat menyimpan pengaduan: ' . $e->getMessage());
@@ -179,15 +213,27 @@ class WhistleblowerController extends Controller
      */
     public function downloadLampiran($id)
     {
-        $lampiran = WhistleLampiran::whereHas('pengaduan', function($query) {
-            $query->where('pelapor_id', Auth::id());
-        })->findOrFail($id);
+        // Pastikan hanya pelapor yang dapat mengunduh lampirannya
+        $lampiran = WhistleLampiran::where('id', $id)
+            ->whereHas('pengaduan', function($query) {
+                $query->where('pelapor_id', Auth::id());
+            })->firstOrFail();
 
-        if (!Storage::disk('public')->exists($lampiran->file)) {
-            abort(404, 'File tidak ditemukan.');
+        if ($lampiran->jenis_lampiran === 'url') {
+            // Jika lampiran adalah URL, redirect ke URL tersebut
+            return redirect()->away($lampiran->url_eksternal);
+        } elseif ($lampiran->jenis_lampiran === 'file') {
+            // Jika lampiran adalah file fisik
+            if (empty($lampiran->path_file) || !Storage::disk('public')->exists($lampiran->path_file)) {
+                abort(404, 'File tidak ditemukan atau path kosong.');
+            }
+
+            $filePath = storage_path('app/public/' . $lampiran->path_file);
+            
+            // Menggunakan accessor getFileNameAttribute() dari model WhistleLampiran
+            return response()->download($filePath, $lampiran->file_name); 
         }
-
-        $filePath = storage_path('app/public/' . $lampiran->file);
-        return response()->download($filePath);
+        
+        abort(404, 'Jenis lampiran tidak valid.');
     }
 }

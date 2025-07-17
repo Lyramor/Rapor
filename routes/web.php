@@ -521,11 +521,11 @@ Route::middleware(['auth'])->group(function () {
     // Routes untuk pelapor (semua role kecuali Admin PPKPT)
     Route::prefix('whistleblower')->name('whistleblower.')->group(function () {
         Route::get('/', [App\Http\Controllers\WhistleblowerController::class, 'index'])->name('index');
-        // Route::get('/create', [App\Http\Controllers\WhistleblowerController::class, 'create'])->name('create');
-        // Route::post('/', [App\Http\Controllers\WhistleblowerController::class, 'store'])->name('store');
-        // Route::get('/{id}', [App\Http\Controllers\WhistleblowerController::class, 'show'])->name('show');
-        // Route::post('/check-status', [App\Http\Controllers\WhistleblowerController::class, 'checkStatus'])->name('check-status');
-        // Route::get('/lampiran/{id}/download', [App\Http\Controllers\WhistleblowerController::class, 'downloadLampiran'])->name('download-lampiran');
+        Route::get('/create', [App\Http\Controllers\WhistleblowerController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\WhistleblowerController::class, 'store'])->name('store');
+        Route::get('/{id}', [App\Http\Controllers\WhistleblowerController::class, 'show'])->name('show');
+        Route::post('/check-status', [App\Http\Controllers\WhistleblowerController::class, 'checkStatus'])->name('check-status');
+        Route::get('/lampiran/{id}/download', [App\Http\Controllers\WhistleblowerController::class, 'downloadLampiran'])->name('download-lampiran');
     });
 
     // Routes untuk Admin PPKPT
@@ -533,9 +533,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'index'])->name('index');
         Route::get('/dashboard', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/{id}', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'show'])->name('show');
-        // Route::put('/{id}/status', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateStatus'])->name('update-status');
-        // Route::get('/export', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'export'])->name('export');
-        // Route::get('/lampiran/{id}/download', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'downloadLampiran'])->name('download-lampiran');
+        Route::put('/{id}/status', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateStatus'])->name('update-status');
+        Route::get('/export', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'export'])->name('export');
+        Route::get('/lampiran/{id}/download', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'downloadLampiran'])->name('download-lampiran');
     });
 });
 
