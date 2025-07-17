@@ -16,7 +16,6 @@ use App\Http\Controllers\PenilaianController;
 use App\Http\Controllers\ExcelController;
 use App\Http\Controllers\PegawaiController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -29,19 +28,19 @@ use App\Http\Controllers\PegawaiController;
 */
 
 Route::get('/', function () {
-    // redirect to login pag
+    // redirect to login page
     return redirect('/gate');
     // return view('welcome');
 });
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login')->middleware('guest');
 Route::post('/login/verify', [LoginController::class, 'verify']);
-Route::post('/login/exit', [LoginController::class, 'logout']);
+Route::post('/login/exit', [LoginController::class, 'logout'])->name('logout');
 Route::get('/forgotpassword', [LoginController::class, 'forgotpassword'])->name('forgotpassword');  
 Route::post('forgotpassword/request', [LoginController::class, 'resetPassword']);
 // Route::get('/login', "LoginController@showLoginForm")->name('login');
 
-// faq
+// FAQ
 Route::get('/faq', function () {
     return "faq";
 })->name('faq');
@@ -115,7 +114,6 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
         Route::get('/sinkronasi/jadwal-kuliah', "SinkronasiController@jadwalKuliah")->name('master.sinkronasi.jadwalKuliah');
         Route::get('/sinkronasi/presensi-kuliah', "SinkronasiController@presensiKuliah")->name('master.sinkronasi.presensiKuliah');
 
-
         Route::post('/sinkronasi/get-kelas-kuliah', "SinkronasiController@getDataKelasKuliah")->name('master.sinkronasi.getDataKelasKuliah');
         Route::post('/sinkronasi/get-jadwal-kuliah', "SinkronasiController@getDataJadwalKuliah")->name('master.sinkronasi.getDataJadwalKuliah');
         Route::post('/sinkronasi/get-presensi-kuliah', "SinkronasiController@getDataPresensiKuliah")->name('master.sinkronasi.getDataPresensiKuliah');
@@ -142,10 +140,9 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
             Route::get('/', "MasterLaporanController@index")->name('master.laporan');
             Route::post('/print-laporan', "MasterLaporanController@printLaporan")->name('master.laporan.print');
         });
+        
         // sinkronasiv2
         Route::get('/sinkronasiV2', "SinkronasiV2Controller@index")->name('master.sinkronasi-v2');
-
-
     });
 
     Route::prefix('rapor')->group(function () {
@@ -245,7 +242,6 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
             Route::get('/', "KuesionerLaporanController@index")->name('kuesioner.laporan');
             Route::post('/print-laporan', "KuesionerLaporanController@printLaporan")->name('kuesioner.laporan.print');
         });
-
     });
 
     Route::prefix('dosen')->group(function () {
@@ -303,6 +299,7 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
 
     Route::prefix('remedial')->group(function () {
         Route::get('/', "RemedialController@index")->name('remedial');
+        
         Route::prefix('periode')->group(function () {
             Route::prefix('prodi')->group(function () {
                 Route::get('/', "RemedialPeriodeProdiController@index")->name('remedial.periode.prodi');
@@ -387,6 +384,7 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
 
     Route::prefix('sisipan')->group(function () {
         Route::get('/', "SisipanController@index")->name('sisipan');
+        
         Route::prefix('periode')->group(function () {
             Route::prefix('prodi')->group(function () {
                 Route::get('/', "SisipanPeriodeProdiController@index")->name('sisipan.periode.prodi');
@@ -505,22 +503,19 @@ Route::namespace('App\Http\Controllers')->middleware('auth')->group(function () 
         });
     });
 
-    // whistleblower
-    // Route::prefix('whistleblower')->group(function () {
-    //     Route::get('/', "WhistleblowerController@index")->name('whistleblower');
-    //     Route::get('/riwayat', "WhistleblowerController@riwayat")->name('whistleblower.riwayat');
-    //     Route::get('/detail/{id}', "WhistleblowerController@detail")->name('whistleblower.detail');
-    //     Route::post('/store', "WhistleblowerController@store")->name('whistleblower.store');
-    //     Route::post('/update', "WhistleblowerController@update")->name('whistleblower.update');
-    //     Route::delete('/{id}', "WhistleblowerController@destroy")->name('whistleblower.delete');
-    // });
-
-    // Whistleblower Routes untuk User/Pelapor
-Route::middleware(['auth'])->group(function () {
+    // ========================================
+    // WHISTLEBLOWER ROUTES
+    // ========================================
     
-    // Routes untuk pelapor (semua role kecuali Admin PPKPT)
+    // Route utama whistleblower dengan middleware redirect
+    Route::get('/whistleblower/dashboard', function() {
+        // Ini akan di-handle oleh middleware
+    })->middleware('whistleblowerRedirect')->name('whistleblower.dashboard');
+
+    // Routes untuk User/Pelapor (semua role kecuali Admin PPKPT)
     Route::prefix('whistleblower')->name('whistleblower.')->group(function () {
         Route::get('/', [App\Http\Controllers\WhistleblowerController::class, 'index'])->name('index');
+        Route::get('/user/dashboard', [App\Http\Controllers\WhistleblowerController::class, 'dashboard'])->name('user.dashboard');
         Route::get('/create', [App\Http\Controllers\WhistleblowerController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\WhistleblowerController::class, 'store'])->name('store');
         Route::get('/{id}', [App\Http\Controllers\WhistleblowerController::class, 'show'])->name('show');
@@ -528,24 +523,46 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lampiran/{id}/download', [App\Http\Controllers\WhistleblowerController::class, 'downloadLampiran'])->name('download-lampiran');
     });
 
-    // Routes untuk Admin PPKPT
-    Route::prefix('admin/whistleblower')->name('admin.whistleblower.')->group(function () {
-        Route::get('/', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'index'])->name('index');
+    // Routes untuk Admin PPKPT dengan middleware khusus
+    Route::prefix('admin/whistleblower')->name('admin.whistleblower.')->middleware(['adminPPKT'])->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'dashboard'])->name('index');
         Route::get('/dashboard', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/{id}', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'show'])->name('show');
         Route::put('/{id}/status', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateStatus'])->name('update-status');
         Route::get('/export', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'export'])->name('export');
         Route::get('/lampiran/{id}/download', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'downloadLampiran'])->name('download-lampiran');
+        
+        // Additional admin routes
+        Route::get('/kategori', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'kategori'])->name('kategori');
+        Route::post('/kategori', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'storeKategori'])->name('kategori.store');
+        Route::put('/kategori/{id}', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateKategori'])->name('kategori.update');
+        Route::delete('/kategori/{id}', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'destroyKategori'])->name('kategori.destroy');
+        
+        Route::get('/settings', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'settings'])->name('settings');
+        Route::put('/settings', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'updateSettings'])->name('settings.update');
+        
+        // Statistics API
+        Route::get('/statistics', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'getStatistics'])->name('statistics');
+        
+        // Assign pengaduan
+        Route::put('/{id}/assign', [App\Http\Controllers\Admin\WhistleblowerAdminController::class, 'assignPengaduan'])->name('assign');
     });
+
+    // Test route
+    Route::get('/test', "TestController@index");
 });
+
+// ========================================
+// PUBLIC WHISTLEBLOWER ROUTES (tanpa login)
+// ========================================
 
 // Route khusus untuk cek status tanpa login (untuk pengaduan anonim)
 Route::get('/whistleblower/status', function() {
     return view('whistleblower.check-status');
 })->name('whistleblower.status-page');
 
-Route::post('/whistleblower/status/check', [App\Http\Controllers\WhistleblowerController::class, 'checkStatus'])->name('whistleblower.status-check');
+Route::post('/whistleblower/status/check', [App\Http\Controllers\WhistleblowerController::class, 'checkStatusPublic'])->name('whistleblower.status-check');
 
-    //test
-    Route::get('/test', "TestController@index");
-});
+// Route untuk pengaduan anonim tanpa login
+Route::get('/whistleblower/anonymous', [App\Http\Controllers\WhistleblowerController::class, 'createAnonymous'])->name('whistleblower.anonymous');
+Route::post('/whistleblower/anonymous', [App\Http\Controllers\WhistleblowerController::class, 'storeAnonymous'])->name('whistleblower.anonymous.store');

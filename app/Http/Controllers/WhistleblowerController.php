@@ -19,6 +19,43 @@ class WhistleblowerController extends Controller
         $this->middleware('auth');
     }
 
+//     public function dashboard()
+// {
+//     // Debug role
+//     $selectedRole = session('selected_role');
+//     $user = Auth::user();
+    
+//     Log::info('=== WHISTLEBLOWER DEBUG ===');
+//     Log::info('User ID: ' . $user->id);
+//     Log::info('User Name: ' . $user->name);
+//     Log::info('Selected Role: ' . $selectedRole);
+//     Log::info('All Session Data: ' . json_encode(session()->all()));
+    
+//     // Cek apakah role adalah Admin PPKPT
+//     $adminPPKTRoles = [
+//         'Admin PPKPT Fakultas',
+//         'Admin PPKPT Prodi'
+//     ];
+    
+//     $isAdminPPKT = in_array($selectedRole, $adminPPKTRoles);
+//     Log::info('Is Admin PPKPT: ' . ($isAdminPPKT ? 'YES' : 'NO'));
+//     Log::info('Current Route: ' . request()->route()->getName());
+//     Log::info('=== END DEBUG ===');
+    
+//     // Tampilkan debug di view juga
+//     if (config('app.debug')) {
+//         dd([
+//             'user' => $user,
+//             'selected_role' => $selectedRole,
+//             'is_admin_ppkt' => $isAdminPPKT,
+//             'current_route' => request()->route()->getName(),
+//             'session_data' => session()->all()
+//         ]);
+//     }
+    
+//     // ... rest of your dashboard code
+// }
+
     /**
      * Display a listing of the user's reports.
      */
@@ -34,14 +71,21 @@ class WhistleblowerController extends Controller
 
         // Statistik pengaduan user
         $stats = [
-            'total' => WhistlePengaduan::where('pelapor_id', $user->id)->count(),
+            'total_pengaduan' => WhistlePengaduan::where('pelapor_id', $user->id)->count(),
             'pending' => WhistlePengaduan::where('pelapor_id', $user->id)->where('status_pengaduan', 'pending')->count(),
             'proses' => WhistlePengaduan::where('pelapor_id', $user->id)->where('status_pengaduan', 'proses')->count(),
             'selesai' => WhistlePengaduan::where('pelapor_id', $user->id)->where('status_pengaduan', 'selesai')->count(),
         ];
 
-        return view('whistleblower.index', compact('pengaduan', 'stats'));
-    }
+        // Riwayat pengaduan terbaru
+        $riwayat_pengaduan = WhistlePengaduan::with(['kategori'])
+            ->where('pelapor_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        return view('whistleblower.dashboard', compact('stats', 'riwayat_pengaduan'));
+        }
 
     /**
      * Show the form for creating a new report.
